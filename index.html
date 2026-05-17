@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Atendimento - Movida</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --or:#E64D11;--ord:#C43D0A;--orl:#D94510;
+  --orf:rgba(230,77,17,.12);
+  --bg:#1e2535;--bg2:#252e40;--bg3:#2e3a52;--bg4:#35445f;
+  --bdr:rgba(255,255,255,.13);--bdr2:rgba(255,255,255,.08);
+  --tx:#edf0f5;--tx2:#a8b4c8;--tx3:#7080a0;
+  --cy:#22d3ee;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px}
+
+/* ── HEADER ── */
+.hdr{background:var(--bg2);border-bottom:2px solid var(--or);padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.hdr-brand{font-size:22px;font-weight:800;color:var(--or);letter-spacing:-.5px}
+.hdr-sub{font-size:11px;font-weight:500;color:var(--tx3);margin-top:1px}
+.hdr-user{display:flex;align-items:center;gap:10px}
+.hdr-email{font-size:12px;color:var(--tx3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-sair{background:transparent;border:1.5px solid rgba(248,113,113,.35);color:#f87171;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-sair:hover{background:rgba(248,113,113,.1);border-color:#f87171}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--bg2);border:1px solid rgba(230,77,17,.25);border-radius:18px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.55)}
+.login-brand{font-size:30px;font-weight:800;color:var(--or);letter-spacing:-.5px;margin-bottom:6px}
+.login-badge{display:inline-block;background:rgba(230,77,17,.12);border:1px solid rgba(230,77,17,.25);color:var(--orl);border-radius:6px;font-size:11px;font-weight:700;padding:3px 10px;letter-spacing:.5px;margin-bottom:28px}
+.login-title{font-size:17px;font-weight:700;color:var(--tx);margin-bottom:28px}
+.login-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);display:block;margin-bottom:7px}
+.login-inp{width:100%;background:var(--bg);border:1.5px solid var(--bdr);border-radius:9px;color:var(--tx);font-size:15px;padding:12px 14px;outline:none;font-family:inherit;transition:.18s;margin-bottom:18px}
+.login-inp:focus{border-color:var(--or);background:rgba(230,77,17,.04);box-shadow:0 0 0 3px rgba(230,77,17,.12)}
+.login-inp::placeholder{color:var(--tx3)}
+.login-btn{width:100%;background:var(--or);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:.18s;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-btn:hover:not(:disabled){background:var(--ord);box-shadow:0 6px 20px rgba(230,77,17,.4)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed}
+.login-err{color:#f87171;font-size:13px;font-weight:600;text-align:center;margin-top:14px;display:none;padding:10px 14px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+
+/* ── MAIN ── */
+#app{display:none}
+.page{max-width:900px;margin:0 auto;padding:32px 24px}
+
+/* ── SCRIPT DE SOLICITAÇÃO ── */
+.script-box{background:var(--bg2);border:1px solid rgba(34,211,238,.25);border-radius:14px;padding:24px;margin-bottom:20px;position:relative;overflow:hidden}
+.script-box::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cy)}
+.script-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--cy);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.script-texto{background:var(--bg3);border-radius:10px;padding:18px 20px;border:1px solid rgba(34,211,238,.15);font-size:15px;color:var(--tx);line-height:2.0;font-weight:500}
+.script-texto .link{color:var(--cy);font-size:16px;font-weight:700}
+.script-texto .dest{color:var(--cy);font-weight:700}
+
+/* ── ALERTA WHATSAPP ── */
+.alert-wpp{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-left:3px solid #fbbf24;border-radius:10px;padding:14px 18px;margin-bottom:24px;display:flex;align-items:flex-start;gap:12px}
+.alert-wpp-ico{font-size:18px;flex-shrink:0;margin-top:1px}
+.alert-wpp-txt{font-size:14px;color:#fbbf24;line-height:1.7;font-weight:500}
+
+/* ── PAINEL LOC ── */
+.panel-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.panel-lbl{font-size:13px;font-weight:700;color:var(--tx2);display:flex;align-items:center;gap:8px}
+.badge-cnt{background:rgba(34,211,238,.15);color:var(--cy);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700}
+.panel-btns{display:flex;gap:8px;align-items:center}
+.btn-atualizar{background:transparent;border:1.5px solid rgba(34,211,238,.4);color:var(--cy);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-atualizar:hover{background:rgba(34,211,238,.08)}
+.btn-limpar{background:transparent;border:1px solid var(--bdr);color:var(--tx3);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-limpar:hover{color:var(--tx2);border-color:var(--bdr)}
+.loc-status{font-size:12px;color:var(--tx3);margin-bottom:12px;text-align:right}
+
+/* ── BUSCA PLACA ── */
+.busca-wrap{margin-bottom:16px;position:relative}
+.busca-inp{width:100%;background:var(--bg2);border:1.5px solid var(--bdr);border-radius:10px;color:var(--tx);font-size:15px;padding:12px 40px 12px 16px;outline:none;font-family:inherit;transition:.18s;box-sizing:border-box}
+.busca-inp:focus{border-color:var(--or);box-shadow:0 0 0 3px rgba(230,77,17,.1)}
+.busca-inp::placeholder{color:var(--tx3)}
+.busca-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:16px;padding:4px;display:none}
+.busca-clear:hover{color:var(--tx)}
+
+/* ── GRUPO PLACA ── */
+.grupo-placa{margin-bottom:18px}
+.grupo-header{background:var(--bg3);border:1px solid var(--bdr);border-radius:10px 10px 0 0;padding:12px 18px;display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--or)}
+.grupo-placa-tag{font-size:18px;font-weight:800;color:var(--or);letter-spacing:2px;font-family:monospace}
+.grupo-cnt{font-size:11px;font-weight:700;color:var(--tx3);background:rgba(230,77,17,.12);border-radius:5px;padding:2px 8px}
+.grupo-body{border:1px solid var(--bdr);border-top:none;border-radius:0 0 10px 10px;overflow:hidden}
+.grupo-body .rcard{border-radius:0;margin-bottom:0;border-left:3px solid transparent;border-bottom:1px solid var(--bdr2)}
+.grupo-body .rcard:last-child{border-bottom:none}
+.sem-placa-tag{color:var(--tx3);font-style:italic;font-size:14px}
+
+/* ── CARDS ── */
+.rcard{background:var(--bg2);border:1px solid var(--bdr);border-left:3px solid transparent;border-radius:12px;padding:18px 20px;margin-bottom:10px;transition:.18s;animation:fi .22s ease}
+.rcard:hover{background:var(--bg3)}
+.flbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:3px}
+.fval{font-size:15px;color:var(--tx);font-weight:500;word-break:break-word;line-height:1.5}
+.fval.big{font-size:17px;font-weight:700}
+.ecrd{background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:48px;text-align:center}
+.eico{font-size:40px;margin-bottom:10px}
+.etitle{font-size:14px;font-weight:600;color:var(--tx2);margin-bottom:5px}
+.esub{font-size:12px;color:var(--tx3);line-height:1.6}
+.badge-novo{background:var(--cy);color:#1e2535;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:8px;display:inline-block}
+.badge-nova{background:#6366f1;color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;position:absolute;top:-6px;left:-6px;z-index:1}
+
+/* ── FOTO GRID ── */
+.fotos-wrap{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.foto-thumb{position:relative;display:inline-block}
+.foto-thumb img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px solid rgba(99,102,241,.3);cursor:pointer;transition:.15s;display:block}
+.foto-thumb img:hover{border-color:#6366f1}
+.foto-actions{position:absolute;bottom:2px;left:0;right:0;display:flex;justify-content:space-between;padding:0 2px}
+
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── LOADING OVERLAY ── */
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(30,37,53,.9);z-index:99990;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.loading-ring{width:44px;height:44px;border:4px solid rgba(230,77,17,.2);border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite}
+
+@media(max-width:600px){
+  .hdr{padding:0 14px}
+  .page{padding:20px 12px}
+  .login-box{padding:32px 24px}
+  .login-brand{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay" style="display:flex">
+  <div class="loading-ring"></div>
+  <div style="font-size:14px;color:var(--tx2);font-weight:600">Carregando...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-brand">Movida</div>
+    <div class="login-badge">Atendimento - Movida</div>
+    <div class="login-title">Atendimento - Movida</div>
+    <label class="login-label">E-mail</label>
+    <input class="login-inp" id="login-email" type="email" placeholder="seu@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()"/>
+    <label class="login-label">Senha</label>
+    <input class="login-inp" id="login-senha" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()" style="margin-bottom:6px"/>
+    <button class="login-btn" id="login-btn" onclick="fazerLogin()">
+      <span id="login-btn-txt">Entrar</span>
+      <span class="spin" id="login-spin"></span>
+    </button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div>
+      <div class="hdr-brand">Movida</div>
+      <div class="hdr-sub">GTF — Atendimento - Movida</div>
+    </div>
+    <div class="hdr-user">
+      <span class="hdr-email" id="hdr-email"></span>
+      <button class="btn-sair" onclick="fazerLogout()">Sair</button>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO -->
+  <div class="page">
+
+    <!-- SCRIPT DE SOLICITAÇÃO -->
+    <div class="script-box" style="margin-bottom:16px">
+      <div class="script-lbl">📞 Script de solicitação ao condutor</div>
+      <div class="script-texto">
+        "Senhor(a), para acionar o serviço de reboque precisamos da sua localização.<br><br>
+        Acesse pelo celular: <span class="link">abrir.ai/movida24h</span> e clique no botão laranja <span class="dest">"Compartilhar minha localização"</span>, caso o link não abra imediatamente aguarde em torno de 10 segundos que será aberto.<br><br>
+        Talvez o site peça permissão para acessar sua localização — clique em <span class="dest">Permitir</span>."
+      </div>
+    </div>
+
+    <!-- ALERTA WHATSAPP -->
+    <div class="alert-wpp">
+      <span class="alert-wpp-ico">⚠️</span>
+      <div class="alert-wpp-txt">
+        Se o condutor tiver dificuldade de enviar a localização e fotos utilizando o link, continuaremos recebendo via <strong>WhatsApp do gestor de plantão</strong>.
+      </div>
+    </div>
+
+    <!-- PAINEL -->
+    <div class="panel-bar">
+      <div class="panel-lbl">
+        📍 Localizações recebidas
+        <span class="badge-cnt" id="loc-count">0</span>
+      </div>
+      <div class="panel-btns">
+        <button class="btn-atualizar" onclick="locAtualizar()">🔄 Atualizar</button>
+        <button class="btn-limpar" onclick="locLimpar()" style="line-height:1.4">🗑️ Limpar Tudo<br><span style="font-size:11px;font-weight:400;opacity:.7">(Apaga todas as fotos e localizações)</span></button>
+      </div>
+    </div>
+
+    <div class="loc-status" id="loc-status"></div>
+
+    <!-- BUSCA POR PLACA -->
+    <div class="busca-wrap">
+      <input class="busca-inp" type="text" id="busca-placa" placeholder="🔍 Buscar por placa (ex: ABC1234)..." maxlength="8" oninput="filtrarPorPlaca(this.value)" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button class="busca-clear" id="busca-clear" onclick="limparBusca()">✕</button>
+    </div>
+
+    <div id="loc-lista">
+      <div class="ecrd">
+        <div class="eico">📍</div>
+        <div class="etitle">Aguardando localizações</div>
+        <div class="esub">Quando o condutor acessar o link e compartilhar, aparece aqui automaticamente</div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+</div><!-- /app -->
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+var SUPA_URL = 'https://yoazfqdvmoondaodnmbh.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvYXpmcWR2bW9vbmRhb2RubWJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MDU4NTYsImV4cCI6MjA5NDQ4MTg1Nn0.YrJoM3fsXBqLAWmqVE_FChEMG67XI3wlWVLU-gO3_UE';
+
+var supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+var _locAutoInterval = null;
+
+// ── INICIALIZAÇÃO ─────────────────────────────────────────────────────────────
+async function init(){
+  var { data: { session } } = await supabase.auth.getSession();
+
+  document.getElementById('loading-overlay').style.display = 'none';
+
+  if(session && session.user){
+    mostrarApp(session.user);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+function mostrarApp(user){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hdr-email').textContent = user.email || '';
+  locAtualizar();
+  _locAutoInterval = setInterval(locAtualizar, 10000);
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function fazerLogin(){
+  var email = document.getElementById('login-email').value.trim();
+  var senha = document.getElementById('login-senha').value;
+  var btn   = document.getElementById('login-btn');
+  var err   = document.getElementById('login-err');
+
+  err.style.display = 'none';
+
+  if(!email || !senha){
+    err.textContent = 'Preencha e-mail e senha.';
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('login-btn-txt').style.display = 'none';
+  document.getElementById('login-spin').style.display = 'inline-block';
+  btn.disabled = true;
+
+  var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: senha });
+
+  document.getElementById('login-btn-txt').style.display = 'inline';
+  document.getElementById('login-spin').style.display = 'none';
+  btn.disabled = false;
+
+  if(error){
+    var msg = 'E-mail ou senha incorretos.';
+    if(error.message && error.message.toLowerCase().includes('confirm')) msg = 'Confirme seu e-mail antes de entrar.';
+    err.textContent = '⚠️ ' + msg;
+    err.style.display = 'block';
+    return;
+  }
+
+  mostrarApp(data.user);
+}
+
+async function fazerLogout(){
+  if(_locAutoInterval){ clearInterval(_locAutoInterval); _locAutoInterval = null; }
+  await supabase.auth.signOut();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-senha').value = '';
+  document.getElementById('login-err').style.display = 'none';
+}
+
+// Escuta mudanças de sessão (ex: expiração do token)
+supabase.auth.onAuthStateChange(function(event, session){
+  if(event === 'SIGNED_OUT'){
+    if(_locAutoInterval){ clearInterval(_locAutoInterval); _locAutoInterval = null; }
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+});
+
+
+// ── LOCALIZAÇÃO ───────────────────────────────────────────────────────────────
+function E(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+var _locsData  = [];
+var _fotosData = [];
+var _filtroPlaca = '';
+
+async function locAtualizar(){
+  var status = document.getElementById('loc-status');
+  var count  = document.getElementById('loc-count');
+  if(status) status.textContent = 'Atualizando...';
+
+  try {
+    var desde = Date.now() - 7200000;
+
+    var [respLoc, respFotos] = await Promise.all([
+      fetch(SUPA_URL+'/rest/v1/localizacoes?ts=gte.'+desde+'&order=ts.desc', {
+        headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+      }),
+      fetch(SUPA_URL+'/rest/v1/fotos_condutor?ts=gte.'+desde+'&order=ts.desc', {
+        headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+      })
+    ]);
+
+    var locs  = await respLoc.json();
+    var fotos = [];
+    try { fotos = await respFotos.json(); } catch(e){ fotos=[]; }
+    if(!Array.isArray(locs))  locs  = [];
+    if(!Array.isArray(fotos)) fotos = [];
+
+    _locsData  = locs;
+    _fotosData = fotos;
+
+    if(count) count.textContent = locs.length;
+    if(status) status.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+
+    renderLista();
+  } catch(e){
+    if(status) status.textContent = '⚠️ Erro ao buscar dados';
+    console.error(e);
+  }
+}
+
+function filtrarPorPlaca(val){
+  _filtroPlaca = (val||'').toUpperCase().trim();
+  var clearBtn = document.getElementById('busca-clear');
+  if(clearBtn) clearBtn.style.display = _filtroPlaca ? 'block' : 'none';
+  renderLista();
+}
+
+function limparBusca(){
+  _filtroPlaca = '';
+  document.getElementById('busca-placa').value = '';
+  var clearBtn = document.getElementById('busca-clear');
+  if(clearBtn) clearBtn.style.display = 'none';
+  renderLista();
+}
+
+function renderLista(){
+  var lista = document.getElementById('loc-lista');
+  var locs  = _locsData;
+  var fotos = _fotosData;
+  var SEM_PLACA = '__sem_placa__';
+
+  if(_filtroPlaca){
+    locs  = locs.filter(function(l){ return (l.placa||'').toUpperCase().includes(_filtroPlaca); });
+    fotos = fotos.filter(function(f){ return (f.placa||'').toUpperCase().includes(_filtroPlaca); });
+  }
+
+  if(!locs.length && !fotos.length){
+    lista.innerHTML = '<div class="ecrd"><div class="eico">'+(_filtroPlaca?'🔍':'📍')+'</div>' +
+      '<div class="etitle">'+(_filtroPlaca?'Nenhum resultado para "'+E(_filtroPlaca)+'"':'Aguardando localizações ou fotos')+'</div>' +
+      '<div class="esub">'+(_filtroPlaca?'Tente buscar por outra placa.':'Quando o condutor compartilhar, aparece aqui automaticamente')+'</div></div>';
+    return;
+  }
+
+  var grupos = {};
+  locs.forEach(function(loc){
+    var p = (loc.placa||'').toUpperCase().trim() || SEM_PLACA;
+    if(!grupos[p]) grupos[p] = { locs:[], fotos:[] };
+    grupos[p].locs.push(loc);
+  });
+  fotos.forEach(function(f){
+    var p = (f.placa||'').toUpperCase().trim() || SEM_PLACA;
+    if(!grupos[p]) grupos[p] = { locs:[], fotos:[] };
+    grupos[p].fotos.push(f);
+  });
+
+  var placaKeys = Object.keys(grupos).sort(function(a,b){
+    if(a===SEM_PLACA) return 1;
+    if(b===SEM_PLACA) return -1;
+    return a.localeCompare(b);
+  });
+
+  var h = '';
+  placaKeys.forEach(function(placa){
+    var g = grupos[placa];
+    var nomePlaca = placa === SEM_PLACA ? 'Sem placa informada' : placa;
+    var totalItens = g.locs.length + g.fotos.length;
+
+    h += '<div class="grupo-placa">';
+    h += '<div class="grupo-header"><span style="font-size:18px">🚗</span>';
+    if(placa===SEM_PLACA){ h += '<span class="sem-placa-tag">'+nomePlaca+'</span>'; }
+    else { h += '<span class="grupo-placa-tag">'+E(nomePlaca)+'</span>'; }
+    h += '<span class="grupo-cnt">'+totalItens+' registro'+(totalItens>1?'s':'')+'</span></div>';
+    h += '<div class="grupo-body">';
+
+    g.locs.forEach(function(loc){
+      var hora  = new Date(loc.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      var gmaps = 'https://www.google.com/maps?q='+loc.lat+','+loc.lng;
+      var isNovo = (Date.now() - loc.ts) < 60000;
+      h += '<div class="rcard" style="border-left-color:#22d3ee;'+(isNovo?'background:rgba(34,211,238,.06)':'')+'">';
+      h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">';
+      h += '<div>';
+      if(isNovo) h += '<span class="badge-novo">🔴 NOVO</span><br>';
+      h += '<div class="flbl">📍 Localização recebida às</div>';
+      h += '<div class="fval big" style="color:#22d3ee;font-family:monospace">'+hora+'</div>';
+      if(loc.endereco){ h += '<div class="flbl" style="margin-top:8px">Endereço aproximado</div><div class="fval">'+E(loc.endereco)+'</div>'; }
+      h += '<div class="flbl" style="margin-top:8px">Coordenadas</div>';
+      h += '<div class="fval" style="font-size:13px;font-family:monospace;color:var(--tx2)">'+loc.lat.toFixed(6)+', '+loc.lng.toFixed(6)+'</div>';
+      if(loc.precisao) h += '<div class="flbl" style="margin-top:4px">Precisão</div><div class="fval" style="font-size:13px;color:var(--tx3)">±'+Math.round(loc.precisao)+' metros</div>';
+      h += '</div>';
+      h += '<div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">';
+      h += '<a href="'+gmaps+'" target="_blank" style="background:#22d3ee;color:#1e2535;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;white-space:nowrap">🗺️ Ver no Maps</a>';
+      h += '<button onclick="locCopiarCoords(\''+loc.lat+','+loc.lng+'\')" style="background:transparent;border:1px solid var(--bdr);color:var(--tx2);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copiar coords</button>';
+      h += '<button onclick="locApagar('+loc.id+')" style="background:transparent;border:1px solid rgba(248,113,113,.4);color:#f87171;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🗑️ Apagar</button>';
+      h += '</div></div></div>';
+    });
+
+    if(g.fotos.length){
+      h += '<div class="rcard" style="border-left-color:#6366f1;">';
+      h += '<div class="flbl" style="color:#a5b4fc;margin-bottom:12px">📷 Fotos recebidas <span style="background:rgba(99,102,241,.15);color:#a5b4fc;border-radius:5px;padding:2px 8px;font-size:11px;margin-left:6px">'+g.fotos.length+'</span></div>';
+      h += '<div class="fotos-wrap">';
+      g.fotos.forEach(function(f){
+        var url   = f.url || '';
+        var dlUrl = url.replace('export=view','export=download');
+        var isNova = f.ts && (Date.now() - f.ts) < 300000;
+        h += '<div class="foto-thumb">';
+        if(isNova) h += '<span class="badge-nova">NOVA</span>';
+        h += '<a href="'+url+'" target="_blank"><img src="'+url+'" onerror="this.src=\'data:image/svg+xml,<svg xmlns=\\\'http://www.w3.org/2000/svg\\\' width=\\\'90\\\' height=\\\'90\\\'><rect width=\\\'90\\\' height=\\\'90\\\' fill=\\\'%232e3a52\\\'/><text x=\\\'50%25\\\' y=\\\'50%25\\\' dominant-baseline=\\\'middle\\\' text-anchor=\\\'middle\\\' fill=\\\'%23a5b4fc\\\' font-size=\\\'28\\\'>📷</text></svg>\'"></a>';
+        h += '<div class="foto-actions">';
+        h += '<a href="'+dlUrl+'" target="_blank" style="background:rgba(99,102,241,.9);color:#fff;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;text-decoration:none;line-height:1.4" title="Download">⬇️</a>';
+        h += '<button onclick="fotosApagarUma('+f.id+')" style="background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:4px;width:18px;height:18px;font-size:9px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center" title="Apagar">✕</button>';
+        h += '</div></div>';
+      });
+      h += '</div>';
+      h += '<button onclick="fotosApagarGrupo(\''+E(placa)+'\')" style="background:transparent;border:1px solid rgba(248,113,113,.4);color:#f87171;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🗑️ Apagar fotos desta placa</button>';
+      h += '</div>';
+    }
+
+    h += '</div></div>';
+  });
+
+  lista.innerHTML = h;
+}
+
+function locCopiarCoords(coords){
+  navigator.clipboard.writeText(coords).catch(function(){ prompt('Copie:', coords); });
+}
+
+async function locApagar(id){
+  await fetch(SUPA_URL+'/rest/v1/localizacoes?id=eq.'+id, {
+    method:'DELETE',
+    headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+  });
+  locAtualizar();
+}
+
+async function locLimpar(){
+  if(!confirm('Apagar todas as localizações E fotos recebidas nas últimas 2h?')) return;
+  var desde = Date.now() - 7200000;
+  await Promise.all([
+    fetch(SUPA_URL+'/rest/v1/localizacoes?ts=gte.'+desde, {
+      method:'DELETE',
+      headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+    }),
+    fetch(SUPA_URL+'/rest/v1/fotos_condutor?ts=gte.'+desde, {
+      method:'DELETE',
+      headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+    })
+  ]);
+  locAtualizar();
+}
+
+async function fotosApagarUma(id){
+  await fetch(SUPA_URL+'/rest/v1/fotos_condutor?id=eq.'+id, {
+    method:'DELETE',
+    headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+  });
+  locAtualizar();
+}
+
+async function fotosApagarGrupo(placa){
+  if(!confirm('Apagar todas as fotos da placa '+placa+'?')) return;
+  var desde = Date.now() - 7200000;
+  var SEM_PLACA = '__sem_placa__';
+  if(placa === SEM_PLACA){
+    // apagar fotos sem placa — não há filtro direto, então buscamos e apagamos individualmente
+    var ids = _fotosData.filter(function(f){ return !(f.placa||'').trim(); }).map(function(f){ return f.id; });
+    for(var i=0;i<ids.length;i++){
+      await fetch(SUPA_URL+'/rest/v1/fotos_condutor?id=eq.'+ids[i], {
+        method:'DELETE', headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+      });
+    }
+  } else {
+    await fetch(SUPA_URL+'/rest/v1/fotos_condutor?placa=eq.'+encodeURIComponent(placa)+'&ts=gte.'+desde, {
+      method:'DELETE',
+      headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+    });
+  }
+  locAtualizar();
+}
+
+async function fotosApagarTodas(){
+  if(!confirm('Apagar todas as fotos recebidas?')) return;
+  var desde = Date.now() - 7200000;
+  await fetch(SUPA_URL+'/rest/v1/fotos_condutor?ts=gte.'+desde, {
+    method:'DELETE',
+    headers:{ 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY }
+  });
+  locAtualizar();
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
